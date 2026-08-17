@@ -1,0 +1,57 @@
+// Prisma schema for Amori dating app
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  email           String    @unique
+  password        String
+  name            String?
+  username        String?   @unique
+  birthDate       String?
+  gender          String?
+  bio             String?
+  avatar          String?
+  interests       String?
+  photos          String?
+  termsAccepted   Boolean   @default(false)
+  termsAcceptedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  likesGiven      Like[]    @relation("LikeFrom")
+  likesReceived   Like[]    @relation("LikeTo")
+  passesGiven     Pass[]    @relation("PassFrom")
+  passesReceived  Pass[]    @relation("PassTo")
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  fromId    Int
+  toId      Int
+  createdAt DateTime @default(now())
+
+  fromUser User @relation("LikeFrom", fields: [fromId], references: [id])
+  toUser   User @relation("LikeTo", fields: [toId], references: [id])
+
+  @@unique([fromId, toId])
+}
+
+model Pass {
+  id        Int      @id @default(autoincrement())
+  fromId    Int
+  toId      Int
+  createdAt DateTime @default(now())
+
+  fromUser User @relation("PassFrom", fields: [fromId], references: [id])
+  toUser   User @relation("PassTo", fields: [toId], references: [id])
+
+  @@unique([fromId, toId])
+}
