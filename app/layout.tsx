@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import { Toaster } from '@/components/ui/sonner';
+import { NotificationProvider } from '@/components/notification-provider';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="en" dir="ltr" className={poppins.variable}>
       <body className="font-sans antialiased min-h-screen">
         {children}
+        <NotificationProvider />
         <Toaster position="top-center" richColors />
       </body>
     </html>

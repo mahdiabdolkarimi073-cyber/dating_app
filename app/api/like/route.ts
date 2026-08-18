@@ -20,7 +20,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Cannot like yourself' }, { status: 400 });
     }
 
-    // Check target user exists
     const targetUser = await prisma.user.findUnique({
       where: { id: toUserId },
       select: { id: true },
@@ -30,26 +29,43 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Remove any existing pass (in case they previously passed)
     await prisma.pass.deleteMany({
       where: { fromId: tokenUser.userId, toId: toUserId },
     }).catch(() => {});
 
-    // Create the like (upsert to avoid duplicates)
     await prisma.like.upsert({
       where: { fromId_toId: { fromId: tokenUser.userId, toId: toUserId } },
       update: {},
       create: { fromId: tokenUser.userId, toId: toUserId },
     });
 
-    // Check if the other user also liked us (mutual like = match)
     const mutualLike = await prisma.like.findUnique({
       where: { fromId_toId: { fromId: toUserId, toId: tokenUser.userId } },
     });
 
+    let matchId: number | null = null;
+
+    if (mutualLike) {
+      const [user1Id, user2Id] = [tokenUser.userId, toUserId].sort((a, b) => a - b);
+
+      const existingMatch = await prisma.match.findUnique({
+        where: { user1Id_user2Id: { user1Id, user2Id } },
+      });
+
+      if (existingMatch) {
+        matchId = existingMatch.id;
+      } else {
+        const newMatch = await prisma.match.create({
+          data: { user1Id, user2Id },
+        });
+        matchId = newMatch.id;
+      }
+    }
+
     return NextResponse.json({
       liked: true,
       matched: !!mutualLike,
+      matchId,
       message: mutualLike ? "It's a match!" : 'Like sent',
     });
   } catch (error) {

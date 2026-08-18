@@ -49,6 +49,13 @@ export async function PUT(request: Request) {
       );
     }
 
+    if (age > 120) {
+      return NextResponse.json(
+        { error: 'Please enter a valid date of birth' },
+        { status: 400 }
+      );
+    }
+
     if (!gender || !['male', 'female', 'other'].includes(gender)) {
       return NextResponse.json({ error: 'Gender is required' }, { status: 400 });
     }

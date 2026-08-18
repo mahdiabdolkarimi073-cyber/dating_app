@@ -30,6 +30,12 @@ model User {
   likesReceived   Like[]    @relation("LikeTo")
   passesGiven     Pass[]    @relation("PassFrom")
   passesReceived  Pass[]    @relation("PassTo")
+
+  matchesInitiated Match[]  @relation("MatchUser1")
+  matchesReceived  Match[]  @relation("MatchUser2")
+  messagesSent     Message[]
+  stories          Story[]
+  storyViews       StoryView[]
 }
 
 model Like {
@@ -54,4 +60,56 @@ model Pass {
   toUser   User @relation("PassTo", fields: [toId], references: [id])
 
   @@unique([fromId, toId])
+}
+
+model Match {
+  id        Int      @id @default(autoincrement())
+  user1Id   Int
+  user2Id   Int
+  createdAt DateTime @default(now())
+
+  user1    User      @relation("MatchUser1", fields: [user1Id], references: [id])
+  user2    User      @relation("MatchUser2", fields: [user2Id], references: [id])
+  messages Message[]
+
+  @@unique([user1Id, user2Id])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  matchId    Int
+  senderId   Int
+  content    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  sender User  @relation(fields: [senderId], references: [id])
+
+  @@index([matchId, createdAt])
+}
+
+model Story {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  mediaUrl  String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  views StoryView[]
+
+  @@index([userId, createdAt])
+}
+
+model StoryView {
+  id        Int      @id @default(autoincrement())
+  storyId   Int
+  viewerId  Int
+  createdAt DateTime @default(now())
+
+  story  Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  viewer User  @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, viewerId])
 }

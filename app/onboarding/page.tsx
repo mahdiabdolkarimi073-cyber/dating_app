@@ -26,6 +26,13 @@ export default function OnboardingPage() {
   const [gender, setGender] = useState<Gender | ''>('');
   const [bio, setBio] = useState('');
 
+  // Max selectable date = exactly 18 years before today (no one under 18)
+  const maxBirthDate = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().split('T')[0];
+  })();
+
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
@@ -196,12 +203,13 @@ export default function OnboardingPage() {
                     id="birthDate"
                     type="date"
                     value={birthDate}
+                    max={maxBirthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
                     className="pl-10"
                     required
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">You must be at least 18 years old to use Amori</p>
+                <p className="text-xs text-muted-foreground">You must be at least 18 years old — the calendar only allows dates up to 18 years ago.</p>
               </div>
 
               {/* Gender */}
