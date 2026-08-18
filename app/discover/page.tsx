@@ -21,6 +21,7 @@ import {
   MessagesSquare,
   ChevronUp,
   Crown,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StoriesBar } from '@/components/stories-bar';
@@ -294,6 +295,15 @@ export default function DiscoverPage() {
             <span className="text-xl font-bold tracking-tight">Amori</span>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              onClick={() => router.push('/matchmaker')}
+              variant="ghost"
+              size="sm"
+              className="relative text-muted-foreground hover:text-primary transition-colors"
+              title="AI Matchmaker"
+            >
+              <Bot className="h-5 w-5" />
+            </Button>
             <Button
               onClick={() => router.push('/likes')}
               variant="ghost"
