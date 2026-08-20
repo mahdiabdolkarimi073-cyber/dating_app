@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { AuroraBackground } from '@/components/aurora-background';
 import { Button } from '@/components/ui/button';
 import { Heart, X, Loader2, LogOut, ArrowLeft, MessagesSquare, Sparkles, AtSign, Crown } from 'lucide-react';
+import { AppHeader } from '@/components/app-header';
 
 interface LikeUser {
   id: number;
@@ -164,61 +165,12 @@ export default function LikesPage() {
     <AuroraBackground>
       <div className="min-h-screen flex flex-col px-4 py-5">
         {/* Header */}
-        <div className="max-w-2xl mx-auto w-full flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/discover')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="inline-flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-romance shadow-lg shadow-primary/30">
-                <MessagesSquare className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-bold tracking-tight">Likes</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              onClick={() => router.push('/discover')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Heart className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push('/matches')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <MessagesSquare className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push('/premium')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-amber-500 transition-colors"
-            >
-              <Crown className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="max-w-5xl mx-auto w-full">
+          <AppHeader title="Likes" showBack backHref="/discover" onLogout={handleLogout} />
         </div>
 
         {/* Content */}
-        <div className="max-w-2xl mx-auto w-full flex-1">
+        <div className="max-w-5xl mx-auto w-full flex-1">
           {likes.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center gap-4 py-20">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 animate-pulse-glow">
@@ -242,7 +194,7 @@ export default function LikesPage() {
               <p className="text-sm text-muted-foreground mb-4 animate-fade-in">
                 {likes.length} {likes.length === 1 ? 'person likes' : 'people like'} you — tap to view their full profile
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {likes.map((user, i) => (
                   <div
                     key={user.id}

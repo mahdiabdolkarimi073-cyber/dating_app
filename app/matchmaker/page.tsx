@@ -29,6 +29,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AppHeader } from '@/components/app-header';
 
 type Step = 'welcome' | 'gender' | 'age' | 'distance' | 'interests' | 'results';
 
@@ -276,75 +277,13 @@ export default function MatchmakerPage() {
     <AuroraBackground>
       <div className="min-h-screen flex flex-col px-4 py-5">
         {/* Header */}
-        <div className="max-w-2xl mx-auto w-full flex items-center justify-between mb-4">
-          <div className="inline-flex items-center gap-2">
-            {step !== 'welcome' && step !== 'results' && (
-              <Button
-                onClick={() => setStep(stepOrder[currentStepIndex - 1])}
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground hover:text-primary"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            )}
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-romance shadow-lg shadow-primary/30">
-              <Heart className="h-4 w-4 text-white fill-white" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">Amori</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              onClick={() => router.push('/discover')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Users className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push('/likes')}
-              variant="ghost"
-              size="sm"
-              className="relative text-muted-foreground hover:text-primary transition-colors"
-            >
-              <Heart className="h-5 w-5" />
-              {likeCount > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white animate-scale-in">
-                  {likeCount}
-                </span>
-              )}
-            </Button>
-            <Button
-              onClick={() => router.push('/matches')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              <MessagesSquare className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={() => router.push('/premium')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-amber-500 transition-colors"
-            >
-              <Crown className="h-5 w-5" />
-            </Button>
-            <Button
-              onClick={handleLogout}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+        <div className="max-w-5xl mx-auto w-full">
+          <AppHeader title="AI Matchmaker" showBack backHref="/discover" likeCount={likeCount} onLogout={handleLogout} />
         </div>
 
         {/* Progress bar for setup steps */}
         {step !== 'welcome' && step !== 'results' && (
-          <div className="max-w-2xl mx-auto w-full mb-6">
+          <div className="max-w-5xl mx-auto w-full mb-6">
             <div className="flex items-center gap-2">
               {stepOrder.slice(1, 5).map((s, i) => {
                 const stepIdx = stepOrder.indexOf(step);
@@ -366,7 +305,7 @@ export default function MatchmakerPage() {
 
         {/* Content */}
         <div className="flex-1 flex items-start justify-center">
-          <div className="w-full max-w-2xl">
+          <div className="w-full max-w-3xl">
 
             {/* WELCOME STEP */}
             {step === 'welcome' && (

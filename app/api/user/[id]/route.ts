@@ -28,6 +28,8 @@ export async function GET(
         bio: true,
         interests: true,
         photos: true,
+        verification: true,
+        isOnline: true,
       },
     });
 

@@ -22,6 +22,13 @@ export async function GET() {
         interests: true,
         photos: true,
         termsAccepted: true,
+        role: true,
+        status: true,
+        verification: true,
+        isPremium: true,
+        superLikesRemaining: true,
+        showInDiscovery: true,
+        onlyVerified: true,
       },
     });
 

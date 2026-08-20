@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getBlockedUserIds } from '@/lib/moderation';
 
 // GET stories feed — stories from users you've matched with, plus your own
 export async function GET() {
@@ -12,17 +13,20 @@ export async function GET() {
 
     const userId = tokenUser.userId;
 
+    const blockedIds = await getBlockedUserIds(userId);
+
     // Get all match partner IDs
     const matches = await prisma.match.findMany({
       where: {
         OR: [{ user1Id: userId }, { user2Id: userId }],
+        status: 'active',
       },
       select: { user1Id: true, user2Id: true },
     });
 
-    const partnerIds = matches.map((m) =>
-      m.user1Id === userId ? m.user2Id : m.user1Id
-    );
+    const partnerIds = matches
+      .map((m) => (m.user1Id === userId ? m.user2Id : m.user1Id))
+      .filter((id) => !blockedIds.includes(id));
 
     // Include self in the feed so user sees their own stories
     const userIds = Array.from(new Set([userId, ...partnerIds]));
@@ -34,6 +38,7 @@ export async function GET() {
       where: {
         userId: { in: userIds },
         createdAt: { gt: twentyFourHoursAgo },
+        moderation: 'approved',
       },
       include: {
         user: {

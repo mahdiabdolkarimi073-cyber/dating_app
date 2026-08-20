@@ -15,6 +15,7 @@ export async function GET() {
         where: { toId: tokenUser.userId },
         select: {
           fromId: true,
+          superLike: true,
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
@@ -35,12 +36,14 @@ export async function GET() {
     // Separate into matches (mutual) and pending requests
     const matches: number[] = [];
     const pending: number[] = [];
+    const superLikeIds = new Set<number>();
 
     for (const like of likedMe) {
       if (myLikedIds.has(like.fromId)) {
         matches.push(like.fromId);
       } else if (!myPassedIds.has(like.fromId)) {
         pending.push(like.fromId);
+        if (like.superLike) superLikeIds.add(like.fromId);
       }
     }
 
@@ -56,6 +59,7 @@ export async function GET() {
         bio: true,
         interests: true,
         photos: true,
+        verification: true,
       },
     });
 
@@ -63,6 +67,7 @@ export async function GET() {
       ...u,
       interests: u.interests ? JSON.parse(u.interests) : [],
       photos: u.photos ? JSON.parse(u.photos) : [],
+      superLiked: superLikeIds.has(u.id),
     }));
 
     return NextResponse.json({ likes, matchCount: matches.length });

@@ -72,7 +72,7 @@ export default function TermsPage() {
       <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
         <div className="mb-6 text-center animate-fade-in-up">
           <div className="mb-2 inline-flex items-center justify-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-romance shadow-lg shadow-primary/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-warm shadow-lg shadow-primary/30">
               <Heart className="h-5 w-5 text-white fill-white" />
             </div>
             <span className="text-2xl font-bold tracking-tight">Amori</span>
@@ -151,7 +151,7 @@ export default function TermsPage() {
                 type="button"
                 onClick={handleSubmit}
                 disabled={loading || !accepted}
-                className="flex-1 bg-gradient-romance text-white shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 h-12 text-base font-semibold disabled:opacity-50 disabled:hover:scale-100"
+                className="flex-1 bg-gradient-warm text-white shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 h-12 text-base font-semibold disabled:opacity-50 disabled:hover:scale-100"
               >
                 {loading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />

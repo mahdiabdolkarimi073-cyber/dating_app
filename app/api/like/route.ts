@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getBlockedUserIds, checkLikeSpam, flagUserIfNeeded } from '@/lib/moderation';
 
 export async function POST(request: Request) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { toUserId } = body;
+    const { toUserId, superLike } = body;
 
     if (!toUserId || typeof toUserId !== 'number') {
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
@@ -20,12 +21,60 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Cannot like yourself' }, { status: 400 });
     }
 
+    // Super like limit check
+    if (superLike) {
+      const myUser = await prisma.user.findUnique({
+        where: { id: tokenUser.userId },
+        select: { isPremium: true, superLikesRemaining: true, superLikesResetAt: true },
+      });
+      if (!myUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+      // Reset daily super likes if needed
+      let remaining = myUser.superLikesRemaining;
+      const now = new Date();
+      if (!myUser.superLikesResetAt || now > myUser.superLikesResetAt) {
+        remaining = myUser.isPremium ? 5 : 1;
+        await prisma.user.update({
+          where: { id: tokenUser.userId },
+          data: {
+            superLikesRemaining: remaining,
+            superLikesResetAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+          },
+        });
+      }
+
+      if (remaining <= 0) {
+        return NextResponse.json({
+          error: 'No super likes remaining',
+          remaining: 0,
+          isPremium: myUser.isPremium,
+        }, { status: 429 });
+      }
+
+      await prisma.user.update({
+        where: { id: tokenUser.userId },
+        data: { superLikesRemaining: remaining - 1 },
+      });
+    }
+
+    // Respect blocks (both directions)
+    const blockedIds = await getBlockedUserIds(tokenUser.userId);
+    if (blockedIds.includes(toUserId)) {
+      return NextResponse.json({ error: 'User not available' }, { status: 403 });
+    }
+
+    // Spam detection
+    if (await checkLikeSpam(tokenUser.userId)) {
+      await flagUserIfNeeded(tokenUser.userId, 'spam');
+      return NextResponse.json({ error: 'Too many actions. Please slow down.' }, { status: 429 });
+    }
+
     const targetUser = await prisma.user.findUnique({
       where: { id: toUserId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
-    if (!targetUser) {
+    if (!targetUser || targetUser.status !== 'active') {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
@@ -35,8 +84,8 @@ export async function POST(request: Request) {
 
     await prisma.like.upsert({
       where: { fromId_toId: { fromId: tokenUser.userId, toId: toUserId } },
-      update: {},
-      create: { fromId: tokenUser.userId, toId: toUserId },
+      update: { superLike: !!superLike },
+      create: { fromId: tokenUser.userId, toId: toUserId, superLike: !!superLike },
     });
 
     const mutualLike = await prisma.like.findUnique({
@@ -60,6 +109,52 @@ export async function POST(request: Request) {
         });
         matchId = newMatch.id;
       }
+
+      // Create match notifications for both users
+      const me = await prisma.user.findUnique({
+        where: { id: tokenUser.userId },
+        select: { name: true },
+      });
+      const other = await prisma.user.findUnique({
+        where: { id: toUserId },
+        select: { name: true },
+      });
+      await prisma.notification.create({
+        data: {
+          userId: toUserId,
+          type: 'match',
+          title: "It's a match!",
+          body: `${me?.name || 'Someone'} liked you back`,
+          link: `/chat/${matchId}`,
+          actorId: tokenUser.userId,
+        },
+      });
+      await prisma.notification.create({
+        data: {
+          userId: tokenUser.userId,
+          type: 'match',
+          title: "It's a match!",
+          body: `You matched with ${other?.name || 'someone'}`,
+          link: `/chat/${matchId}`,
+          actorId: toUserId,
+        },
+      });
+    } else {
+      // Create a like_request notification for the recipient
+      const me = await prisma.user.findUnique({
+        where: { id: tokenUser.userId },
+        select: { name: true },
+      });
+      await prisma.notification.create({
+        data: {
+          userId: toUserId,
+          type: 'like_request',
+          title: 'New like',
+          body: `${me?.name || 'Someone'} liked you`,
+          link: '/likes',
+          actorId: tokenUser.userId,
+        },
+      });
     }
 
     return NextResponse.json({

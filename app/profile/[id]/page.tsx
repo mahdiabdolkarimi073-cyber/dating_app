@@ -19,6 +19,8 @@ import {
   Info,
   CheckCircle2,
   MessagesSquare,
+  Shield,
+  Ban,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -119,6 +121,12 @@ export default function UserProfilePage() {
       const data = await res.json();
       if (res.ok) {
         setUser(data.user);
+        // Track profile view
+        fetch('/api/profile-view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ viewedId: userId }),
+        }).catch(() => {});
       } else {
         toast.error(data.error || 'User not found');
         router.push('/discover');
@@ -192,6 +200,54 @@ export default function UserProfilePage() {
     router.push('/auth');
   };
 
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+
+  const handleBlock = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch('/api/block', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (res.ok) {
+        toast.success('User blocked', { duration: 2000 });
+        setShowBlockDialog(false);
+        router.push('/discover');
+      } else {
+        toast.error('Failed to block');
+      }
+    } catch {
+      toast.error('Failed to block');
+    }
+  };
+
+  const handleReport = async () => {
+    if (!user) return;
+    if (!reportReason) {
+      toast.error('Please select a reason');
+      return;
+    }
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportedId: user.id, reason: reportReason, targetType: 'user' }),
+      });
+      if (res.ok) {
+        setShowReportDialog(false);
+        setReportReason('');
+        toast.success('Report submitted. Thank you.', { duration: 2000 });
+      } else {
+        toast.error('Failed to submit report');
+      }
+    } catch {
+      toast.error('Failed to submit report');
+    }
+  };
+
   if (!authChecked || loading) {
     return (
       <AuroraBackground>
@@ -230,6 +286,26 @@ export default function UserProfilePage() {
               className="text-muted-foreground hover:text-destructive transition-colors"
             >
               <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={() => setShowReportDialog(true)}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive transition-colors"
+              title="Report"
+            >
+              <Shield className="h-4 w-4" />
+            </Button>
+            <Button
+              onClick={() => setShowBlockDialog(true)}
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-destructive transition-colors"
+              title="Block"
+            >
+              <Ban className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -307,7 +383,7 @@ export default function UserProfilePage() {
                   )}
                 </div>
               ) : (
-                <div className="aspect-[4/3] flex flex-col items-center justify-center bg-gradient-romance">
+                <div className="aspect-[4/3] flex flex-col items-center justify-center bg-gradient-warm">
                   <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
                     <span className="text-4xl font-bold text-white">
                       {user.name?.[0]?.toUpperCase() || '?'}
@@ -444,7 +520,7 @@ export default function UserProfilePage() {
                   {user.relationship.matchId && (
                     <Button
                       onClick={() => router.push(`/chat/${user.relationship.matchId}`)}
-                      className="rounded-xl bg-gradient-romance text-white shadow-lg shadow-primary/30 hover:scale-[1.02] transition-all"
+                      className="rounded-xl bg-gradient-warm text-white shadow-lg shadow-primary/30 hover:scale-[1.02] transition-all"
                     >
                       <MessagesSquare className="h-5 w-5" />
                       Chat
@@ -482,7 +558,7 @@ export default function UserProfilePage() {
                   </Button>
                   <Button
                     onClick={handleLike}
-                    className="flex-1 rounded-xl bg-gradient-romance text-white shadow-lg shadow-primary/30 hover:scale-[1.02] transition-all"
+                    className="flex-1 rounded-xl bg-gradient-warm text-white shadow-lg shadow-primary/30 hover:scale-[1.02] transition-all"
                     disabled={actionLoading}
                   >
                     {actionLoading ? (
@@ -499,6 +575,77 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Block dialog */}
+        {showBlockDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in" onClick={() => setShowBlockDialog(false)}>
+            <div className="glass-strong rounded-2xl border border-border/50 shadow-2xl p-6 max-w-sm mx-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 mx-auto mb-4">
+                <Ban className="h-7 w-7 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-center mb-2">Block {user.name}?</h3>
+              <p className="text-sm text-muted-foreground text-center mb-6">
+                They won't be able to see your profile or contact you. Any existing match will be removed.
+              </p>
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleBlock} className="rounded-xl bg-destructive text-white hover:bg-destructive/90">
+                  Block
+                </Button>
+                <Button onClick={() => setShowBlockDialog(false)} variant="ghost" className="rounded-xl">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Report dialog */}
+        {showReportDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fade-in" onClick={() => setShowReportDialog(false)}>
+            <div className="glass-strong rounded-2xl border border-border/50 shadow-2xl p-6 max-w-sm mx-4 animate-scale-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 mx-auto mb-4">
+                <Shield className="h-7 w-7 text-destructive" />
+              </div>
+              <h3 className="text-lg font-bold text-center mb-2">Report {user.name}</h3>
+              <p className="text-sm text-muted-foreground text-center mb-4">Why are you reporting this user?</p>
+              <div className="space-y-2 mb-4">
+                {[
+                  { value: 'harassment', label: 'Harassment' },
+                  { value: 'fake_profile', label: 'Fake Profile' },
+                  { value: 'inappropriate_content', label: 'Inappropriate Content' },
+                  { value: 'scam', label: 'Scam' },
+                  { value: 'spam', label: 'Spam' },
+                  { value: 'other', label: 'Other' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setReportReason(opt.value)}
+                    className={cn(
+                      'w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 text-sm transition-all',
+                      reportReason === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40'
+                    )}
+                  >
+                    <div className={cn(
+                      'flex h-5 w-5 items-center justify-center rounded-full border-2',
+                      reportReason === opt.value ? 'border-primary bg-primary' : 'border-border'
+                    )}>
+                      {reportReason === opt.value && <CheckCircle2 className="h-3 w-3 text-white" />}
+                    </div>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button onClick={handleReport} disabled={!reportReason} className="rounded-xl bg-destructive text-white hover:bg-destructive/90">
+                  Submit Report
+                </Button>
+                <Button onClick={() => setShowReportDialog(false)} variant="ghost" className="rounded-xl">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AuroraBackground>
   );

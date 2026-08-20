@@ -15,6 +15,7 @@ export async function GET() {
           { user1Id: tokenUser.userId },
           { user2Id: tokenUser.userId },
         ],
+        status: 'active',
       },
       include: {
         user1: {

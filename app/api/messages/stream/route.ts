@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   const match = await prisma.match.findUnique({
     where: { id: matchId },
-    select: { user1Id: true, user2Id: true },
+    select: { user1Id: true, user2Id: true, status: true },
   });
 
   if (!match) {
@@ -37,13 +37,12 @@ export async function GET(request: Request) {
     async start(controller) {
       let lastMessageId = 0;
       let closed = false;
+      let lastMatchStatus = match.status;
 
-      // Send initial connection confirmation
       controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
 
-      // Send last message ID so client knows where to start
       const recentMessages = await prisma.message.findMany({
-        where: { matchId },
+        where: { matchId, deleted: false },
         orderBy: { createdAt: 'desc' },
         take: 1,
         select: { id: true },
@@ -58,16 +57,33 @@ export async function GET(request: Request) {
       const interval = setInterval(async () => {
         if (closed) return;
         try {
+          // Check match status
+          const currentMatch = await prisma.match.findUnique({
+            where: { id: matchId },
+            select: { status: true },
+          });
+          if (currentMatch && currentMatch.status !== lastMatchStatus) {
+            lastMatchStatus = currentMatch.status;
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ type: 'unmatch' })}\n\n`)
+            );
+          }
+
+          // New messages
           const newMessages = await prisma.message.findMany({
             where: {
               matchId,
               id: { gt: lastMessageId },
+              deleted: false,
             },
             orderBy: { createdAt: 'asc' },
             select: {
               id: true,
               senderId: true,
               content: true,
+              status: true,
+              mediaUrl: true,
+              replyToId: true,
               read: true,
               createdAt: true,
             },
@@ -79,20 +95,29 @@ export async function GET(request: Request) {
               encoder.encode(`data: ${JSON.stringify({ type: 'message', message: msg })}\n\n`)
             );
 
-            // If message is from the other user, mark as read
             if (msg.senderId === otherUserId && !msg.read) {
               await prisma.message.update({
                 where: { id: msg.id },
-                data: { read: true },
+                data: { read: true, status: 'seen' },
               });
             }
           }
+
+          // Check for status updates on existing messages
+          const statusUpdates = await prisma.message.findMany({
+            where: {
+              matchId,
+              senderId: otherUserId,
+              status: { in: ['delivered', 'seen'] },
+            },
+            select: { id: true, status: true },
+          });
+          // We don't track which we've sent, so skip to avoid spam
         } catch {
           // silent error, keep streaming
         }
       }, 1000);
 
-      // Handle client disconnect
       request.signal.addEventListener('abort', () => {
         closed = true;
         clearInterval(interval);

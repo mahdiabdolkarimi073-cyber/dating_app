@@ -122,7 +122,7 @@ export default function HomePage() {
         {/* Header */}
         <div className="max-w-3xl mx-auto mb-8 flex items-center justify-between">
           <div className="inline-flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-romance shadow-lg shadow-primary/30">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-warm shadow-lg shadow-primary/30">
               <Heart className="h-5 w-5 text-white fill-white" />
             </div>
             <span className="text-2xl font-bold tracking-tight">Amori</span>
@@ -141,7 +141,7 @@ export default function HomePage() {
         {/* Profile Card */}
         <Card className="max-w-3xl mx-auto glass border-border/50 shadow-2xl shadow-primary/10 animate-scale-in overflow-hidden">
           {/* Banner */}
-          <div className="h-32 bg-gradient-romance animate-gradient-x relative">
+          <div className="h-32 bg-gradient-warm animate-gradient-x relative">
             <div className="absolute inset-0 opacity-20">
               <div className="absolute top-4 right-8 text-3xl animate-float">❤</div>
               <div className="absolute top-8 left-12 text-2xl animate-float-slow">♥</div>
@@ -158,7 +158,7 @@ export default function HomePage() {
                 </div>
               ) : (
                 <Avatar className="h-32 w-32 border-4 border-card shadow-xl">
-                  <AvatarFallback className="bg-gradient-romance text-white text-4xl font-bold">
+                  <AvatarFallback className="bg-gradient-warm text-white text-4xl font-bold">
                     {initials}
                   </AvatarFallback>
                 </Avatar>

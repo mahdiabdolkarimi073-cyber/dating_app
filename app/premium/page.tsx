@@ -20,6 +20,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AppHeader } from '@/components/app-header';
 
 const plans = [
   {
@@ -123,35 +124,12 @@ export default function PremiumPage() {
     <AuroraBackground>
       <div className="min-h-screen flex flex-col px-4 py-5">
         {/* Header */}
-        <div className="max-w-2xl mx-auto w-full flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={() => router.push('/discover')}
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="inline-flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/30">
-                <Crown className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-xl font-bold tracking-tight">Premium</span>
-            </div>
-          </div>
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-destructive transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+        <div className="max-w-5xl mx-auto w-full">
+          <AppHeader title="Premium" showBack backHref="/discover" onLogout={handleLogout} />
         </div>
 
         {/* Content */}
-        <div className="max-w-2xl mx-auto w-full flex-1">
+        <div className="max-w-5xl mx-auto w-full flex-1">
           {/* Hero */}
           <div className="text-center mb-8 animate-fade-in-up">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-xl shadow-amber-500/30 mb-4 animate-pulse-glow">
@@ -185,7 +163,7 @@ export default function PremiumPage() {
           </div>
 
           {/* Plans */}
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map((plan, i) => (
               <div
                 key={plan.id}
@@ -200,7 +178,7 @@ export default function PremiumPage() {
               >
                 {plan.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <div className="flex items-center gap-1 rounded-full bg-gradient-romance px-4 py-1 shadow-lg">
+                    <div className="flex items-center gap-1 rounded-full bg-gradient-warm px-4 py-1 shadow-lg">
                       <Star className="h-3 w-3 text-white fill-white" />
                       <span className="text-xs font-bold text-white">Most Popular</span>
                     </div>
@@ -253,7 +231,7 @@ export default function PremiumPage() {
                     plan.disabled
                       ? 'bg-secondary text-muted-foreground'
                       : plan.popular
-                      ? 'bg-gradient-romance text-white shadow-lg shadow-primary/30 hover:scale-[1.02]'
+                      ? 'bg-gradient-warm text-white shadow-lg shadow-primary/30 hover:scale-[1.02]'
                       : 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30 hover:scale-[1.02]'
                   )}
                 >

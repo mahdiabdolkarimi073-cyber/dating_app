@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getBlockedUserIds } from '@/lib/moderation';
 
 export interface MatchmakerCriteria {
   targetGender: 'male' | 'female' | 'both' | null;
@@ -26,7 +27,7 @@ export interface ScoredMatch {
   isTopMatch: boolean;
 }
 
-const INTEREST_LABELS: Record<string, { label: string; emoji: string }> = {
+export const INTEREST_LABELS: Record<string, { label: string; emoji: string }> = {
   travel: { label: 'Travel', emoji: '✈️' },
   music: { label: 'Music', emoji: '🎵' },
   foodie: { label: 'Foodie', emoji: '🍽️' },
@@ -111,15 +112,17 @@ export async function findMatches(
   const myInterests: string[] = me.interests ? JSON.parse(me.interests) : [];
   const myAge = calculateAge(me.birthDate);
 
-  const [likedTargets, passedTargets] = await Promise.all([
+  const [likedTargets, passedTargets, blockedIds] = await Promise.all([
     prisma.like.findMany({ where: { fromId: userId }, select: { toId: true } }),
     prisma.pass.findMany({ where: { fromId: userId }, select: { toId: true } }),
+    getBlockedUserIds(userId),
   ]);
 
   const excludeIds = [
     userId,
     ...likedTargets.map((l) => l.toId),
     ...passedTargets.map((p) => p.toId),
+    ...blockedIds,
   ];
 
   const candidates = await prisma.user.findMany({
@@ -128,6 +131,7 @@ export async function findMatches(
       termsAccepted: true,
       username: { not: null },
       photos: { not: null },
+      status: 'active',
     },
     select: {
       id: true,

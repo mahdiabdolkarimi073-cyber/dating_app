@@ -17,9 +17,13 @@ const config: Config = {
         'gradient-conic':
           'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
         'gradient-romance':
-          'linear-gradient(135deg, hsl(348, 83%, 57%) 0%, hsl(280, 60%, 55%) 50%, hsl(330, 70%, 50%) 100%)',
+          'linear-gradient(135deg, #FF3F78 0%, #C44CE0 50%, #9B45D8 100%)',
         'gradient-romance-soft':
-          'linear-gradient(135deg, hsl(348, 83%, 95%) 0%, hsl(280, 60%, 92%) 100%)',
+          'linear-gradient(135deg, hsl(333, 80%, 95%) 0%, hsl(275, 60%, 93%) 100%)',
+        'gradient-warm':
+          'linear-gradient(135deg, #FF3F78 0%, #A644D7 100%)',
+        'gradient-warm-soft':
+          'linear-gradient(135deg, hsl(333, 80%, 95%) 0%, hsl(275, 60%, 93%) 100%)',
       },
       borderRadius: {
         lg: 'var(--radius)',

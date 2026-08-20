@@ -28,6 +28,46 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  // Role: user | admin | moderator | super_admin
+  role            String    @default("user")
+  // Suspension / ban
+  status          String    @default("active") // active | suspended | banned
+  suspendedUntil  DateTime?
+  // Moderation flags
+  moderationFlag  String?   // spam | suspicious | fake | null
+  flaggedAt       DateTime?
+
+  // Privacy
+  showOnlineStatus Boolean  @default(true)
+  showLastSeen     Boolean  @default(true)
+  showInDiscovery  Boolean  @default(true)
+  onlyVerified     Boolean  @default(false)
+  // Verification: none | pending | verified | rejected
+  verification     String   @default("none")
+  // Account deletion
+  deletionRequestedAt DateTime?
+  // Premium
+  isPremium        Boolean  @default(false)
+  premiumUntil     DateTime?
+  // Super likes remaining (free: 1/day, premium: 5/day)
+  superLikesRemaining Int  @default(1)
+  superLikesResetAt  DateTime?
+  // Rewind
+  lastRewindAt     DateTime?
+  // Boost
+  boosts           Boost[]
+
+  // Presence (managed via API)
+  isOnline        Boolean   @default(false)
+  lastSeen        DateTime?
+
+  // Relations for new features
+  profileViewsGiven  ProfileView[] @relation("ViewFrom")
+  profileViewsReceived ProfileView[] @relation("ViewTo")
+  savedFilters       SavedFilter[]
+  dailyPicks         DailyPick[]
+  verificationRequest VerificationRequest?
+
   likesGiven      Like[]    @relation("LikeFrom")
   likesReceived   Like[]    @relation("LikeTo")
   passesGiven     Pass[]    @relation("PassFrom")
@@ -39,12 +79,26 @@ model User {
   stories          Story[]
   storyViews       StoryView[]
   matchmakerPref    MatchmakerPreference?
+
+  // Block & Report
+  blocksGiven      Block[]   @relation("BlockFrom")
+  blocksReceived   Block[]   @relation("BlockTo")
+  reportsGiven     Report[]  @relation("ReportFrom")
+  reportsReceived  Report[]  @relation("ReportTo")
+
+  // Notifications
+  notifications    Notification[]
+
+  @@index([status])
+  @@index([moderationFlag])
+  @@index([verification])
 }
 
 model Like {
   id        Int      @id @default(autoincrement())
   fromId    Int
   toId      Int
+  superLike Boolean  @default(false)
   createdAt DateTime @default(now())
 
   fromUser User @relation("LikeFrom", fields: [fromId], references: [id])
@@ -70,12 +124,17 @@ model Match {
   user1Id   Int
   user2Id   Int
   createdAt DateTime @default(now())
+  // Unmatch state: active | unmatched
+  status    String   @default("active")
+  unmatchedBy Int?
+  unmatchedAt DateTime?
 
   user1    User      @relation("MatchUser1", fields: [user1Id], references: [id])
   user2    User      @relation("MatchUser2", fields: [user2Id], references: [id])
   messages Message[]
 
   @@unique([user1Id, user2Id])
+  @@index([status])
 }
 
 model Message {
@@ -83,13 +142,25 @@ model Message {
   matchId    Int
   senderId   Int
   content    String
+  // status: sent | delivered | seen
+  status    String   @default("sent")
+  // For image messages: mediaUrl stored here
+  mediaUrl  String?
+  // For replies
+  replyToId Int?
+  // Soft delete
+  deleted   Boolean  @default(false)
+  deletedBy Int?
   read       Boolean  @default(false)
   createdAt  DateTime @default(now())
 
   match  Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
   sender User  @relation(fields: [senderId], references: [id])
+  replyTo Message? @relation("MessageReply", fields: [replyToId], references: [id])
+  replies Message[] @relation("MessageReply")
 
   @@index([matchId, createdAt])
+  @@index([status])
 }
 
 model Story {
@@ -97,12 +168,15 @@ model Story {
   userId    Int
   mediaUrl  String
   caption   String?
+  // moderation: pending | approved | flagged | removed
+  moderation String @default("approved")
   createdAt DateTime @default(now())
 
   user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   views StoryView[]
 
   @@index([userId, createdAt])
+  @@index([moderation])
 }
 
 model StoryView {
@@ -128,4 +202,154 @@ model MatchmakerPreference {
   updatedAt       DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Block {
+  id        Int      @id @default(autoincrement())
+  blockerId Int
+  blockedId Int
+  createdAt DateTime @default(now())
+
+  blocker User @relation("BlockFrom", fields: [blockerId], references: [id])
+  blocked  User @relation("BlockTo", fields: [blockedId], references: [id])
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model Report {
+  id          Int      @id @default(autoincrement())
+  reporterId  Int
+  reportedId  Int
+  // user | message
+  targetType  String   @default("user")
+  // target message id if targetType=message
+  targetMessageId Int?
+  // harassment | fake_profile | inappropriate_content | scam | spam | other
+  reason      String
+  description String?
+  // pending | reviewed | dismissed | actioned
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  Int?
+
+  reporter User @relation("ReportFrom", fields: [reporterId], references: [id])
+  reported User @relation("ReportTo", fields: [reportedId], references: [id])
+
+  @@index([status])
+  @@index([reportedId])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  // like | like_request | match | message | story | premium | system | report
+  type      String
+  title     String
+  body      String
+  // optional link target
+  link      String?
+  // optional related actor id
+  actorId   Int?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model ModerationLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  // username | bio | photo | story | behavior
+  field     String
+  // spam | suspicious | fake | inappropriate | other
+  reason    String
+  details   String?
+  // pending | reviewed | actioned
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Boost {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  // active | expired
+  status    String   @default("active")
+  // duration in minutes
+  durationMinutes Int @default(30)
+  startsAt  DateTime @default(now())
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([expiresAt])
+}
+
+model ProfileView {
+  id        Int      @id @default(autoincrement())
+  viewerId  Int
+  viewedId  Int
+  createdAt DateTime @default(now())
+
+  viewer User @relation("ViewFrom", fields: [viewerId], references: [id], onDelete: Cascade)
+  viewed  User @relation("ViewTo", fields: [viewedId], references: [id], onDelete: Cascade)
+
+  @@unique([viewerId, viewedId])
+  @@index([viewedId, createdAt])
+}
+
+model SavedFilter {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  name      String
+  // JSON string of filter config
+  config    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model DailyPick {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  pickedUserId Int
+  // date string YYYY-MM-DD
+  pickDate  String
+  shown     Boolean  @default(false)
+  liked     Boolean  @default(false)
+  passed   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pickedUserId, pickDate])
+  @@index([userId, pickDate])
+}
+
+model VerificationRequest {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  // pending | approved | rejected
+  status    String   @default("pending")
+  // photo URL for verification selfie
+  photoUrl  String
+  submittedAt DateTime @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
 }

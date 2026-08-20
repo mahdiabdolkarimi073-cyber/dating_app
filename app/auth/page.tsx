@@ -82,7 +82,7 @@ export default function AuthPage() {
         {/* Logo */}
         <div className="mb-8 text-center animate-fade-in-up">
           <div className="mb-3 inline-flex items-center justify-center gap-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-romance shadow-lg shadow-primary/30">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-warm shadow-lg shadow-primary/25">
               <Heart className="h-6 w-6 text-white fill-white" />
             </div>
             <span className="text-3xl font-bold tracking-tight">Amori</span>
@@ -172,7 +172,7 @@ export default function AuthPage() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-romance text-white shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 h-12 text-base font-semibold"
+                    className="w-full bg-gradient-warm text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 h-12 text-base font-semibold border-0"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -231,7 +231,7 @@ export default function AuthPage() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-gradient-romance text-white shadow-lg shadow-primary/30 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 h-12 text-base font-semibold"
+                    className="w-full bg-gradient-warm text-white shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:scale-[1.02] transition-all duration-300 h-12 text-base font-semibold border-0"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
