@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,9 @@ import {
   Sparkles,
   Users,
   Star,
+  User,
+  UserRoundPlus,
+  CalendarDays,
 } from 'lucide-react';
 
 const FEATURES = [
@@ -83,15 +86,29 @@ function AppleIcon({ className }: { className?: string }) {
 
 export default function AuthPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isRegister = searchParams.get('tab') === 'register';
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [remember, setRemember] = useState(true);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ name?: string; email?: string; password?: string; birthDate?: string; gender?: string }>({});
 
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [name, setName] = useState('');
+  const [registerEmail, setRegisterEmail] = useState('');
+  const [registerPassword, setRegisterPassword] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState<'female' | 'male' | ''>('');
+  const [acceptedTerms, setAcceptedTerms] = useState(true);
 
-  const validate = () => {
+  const maxBirthDate = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString().split('T')[0];
+  })();
+
+  const validateLogin = () => {
     const next: typeof errors = {};
     if (!loginEmail) next.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(loginEmail)) next.email = 'Enter a valid email';
@@ -101,9 +118,22 @@ export default function AuthPage() {
     return Object.keys(next).length === 0;
   };
 
+  const validateRegister = () => {
+    const next: typeof errors = {};
+    if (!name.trim()) next.name = 'Full name is required';
+    if (!registerEmail) next.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(registerEmail)) next.email = 'Enter a valid email';
+    if (!registerPassword) next.password = 'Password is required';
+    else if (registerPassword.length < 6) next.password = 'Password must be at least 6 characters';
+    if (!birthDate) next.birthDate = 'Date of birth is required';
+    if (!gender) next.gender = 'Please choose a gender';
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validateLogin()) return;
     setLoading(true);
     try {
       const res = await fetch('/api/auth/login', {
@@ -131,6 +161,46 @@ export default function AuthPage() {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateRegister()) return;
+    if (!acceptedTerms) {
+      toast.error('Please accept the Terms & Privacy Policy to continue');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: registerEmail, password: registerPassword, name }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Registration failed');
+        setLoading(false);
+        return;
+      }
+      try {
+        await fetch('/api/user/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, birthDate, gender }),
+        });
+      } catch {}
+      toast.success('Account created! Let’s set up your profile');
+      router.push('/onboarding');
+    } catch {
+      toast.error('Connection error');
+      setLoading(false);
+    }
+  };
+
+  const switchTab = (tab: 'login' | 'register') => {
+    setErrors({});
+    router.push(tab === 'register' ? '/auth?tab=register' : '/auth');
+  };
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-[#FFFBFD]">
       {/* Background gradients */}
@@ -153,7 +223,7 @@ export default function AuthPage() {
 
       {/* Header */}
       <header className="relative z-20 mx-auto flex h-[60px] max-w-[1360px] items-center justify-between px-6 md:px-10 lg:px-12">
-        <div className="flex items-center gap-2.5">
+        <button onClick={() => router.push('/')} className="flex items-center gap-2.5">
           <div
             className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] shadow-md"
             style={{
@@ -164,15 +234,29 @@ export default function AuthPage() {
             <Heart className="h-[18px] w-[18px] fill-white text-white" />
           </div>
           <span className="text-[22px] font-extrabold tracking-tight text-[#181318]">Amori</span>
-        </div>
+        </button>
         <div className="flex items-center gap-3.5">
-          <span className="hidden text-[13px] text-[#71666F] sm:inline">Don&apos;t have an account?</span>
-          <button
-            onClick={() => router.push('/auth?tab=register')}
-            className="h-10 rounded-[12px] border border-[#F2B7D1] bg-white/70 px-5 text-[13px] font-semibold text-[#DD3478] transition-colors hover:bg-white"
-          >
-            Sign Up
-          </button>
+          {isRegister ? (
+            <>
+              <span className="hidden text-[13px] text-[#71666F] sm:inline">Already have an account?</span>
+              <button
+                onClick={() => switchTab('login')}
+                className="h-10 rounded-[12px] border border-[#F2B7D1] bg-white/70 px-5 text-[13px] font-semibold text-[#DD3478] transition-colors hover:bg-white"
+              >
+                Log In
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="hidden text-[13px] text-[#71666F] sm:inline">Don&apos;t have an account?</span>
+              <button
+                onClick={() => switchTab('register')}
+                className="h-10 rounded-[12px] border border-[#F2B7D1] bg-white/70 px-5 text-[13px] font-semibold text-[#DD3478] transition-colors hover:bg-white"
+              >
+                Sign Up
+              </button>
+            </>
+          )}
         </div>
       </header>
 
@@ -187,21 +271,40 @@ export default function AuthPage() {
                 className="max-w-[430px] text-[52px] font-extrabold leading-[1.05] text-[#1A121A] animate-fade-in-up"
                 style={{ fontWeight: 800 }}
               >
-                Welcome back
-                <br />
-                to{' '}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{ background: 'linear-gradient(135deg, #E83382 0%, #A143D5 100%)', WebkitBackgroundClip: 'text' }}
-                >
-                  Amori
-                </span>
-                <Heart className="ml-2 inline-block h-9 w-9 fill-none text-[#E83382] align-middle" strokeWidth={2} />
+                {isRegister ? (
+                  <>
+                    Find your
+                    <br />
+                    perfect{' '}
+                    <span
+                      className="bg-clip-text text-transparent"
+                      style={{ background: 'linear-gradient(135deg, #E83382 0%, #A143D5 100%)', WebkitBackgroundClip: 'text' }}
+                    >
+                      match
+                    </span>
+                    <Heart className="ml-2 inline-block h-9 w-9 fill-none text-[#E83382] align-middle" strokeWidth={2} />
+                  </>
+                ) : (
+                  <>
+                    Welcome back
+                    <br />
+                    to{' '}
+                    <span
+                      className="bg-clip-text text-transparent"
+                      style={{ background: 'linear-gradient(135deg, #E83382 0%, #A143D5 100%)', WebkitBackgroundClip: 'text' }}
+                    >
+                      Amori
+                    </span>
+                    <Heart className="ml-2 inline-block h-9 w-9 fill-none text-[#E83382] align-middle" strokeWidth={2} />
+                  </>
+                )}
               </h1>
 
               {/* Description */}
               <p className="mt-[18px] max-w-[370px] text-[16px] leading-[1.5] text-[#766B73] animate-fade-in-up" style={{ animationDelay: '0.08s' }}>
-                Log in to continue your journey and connect with amazing people.
+                {isRegister
+                  ? 'Create your free account and start meeting amazing people today.'
+                  : 'Log in to continue your journey and connect with amazing people.'}
               </p>
 
               {/* Features */}
@@ -308,20 +411,24 @@ export default function AuthPage() {
             </div>
           </section>
 
-          {/* RIGHT - Login Card */}
+          {/* RIGHT - Auth Card */}
           <section className="flex items-center justify-center py-8 lg:py-0">
             <div
               className="w-full max-w-[540px] rounded-[22px] border border-[#F0E7ED] bg-white/95 p-7 shadow-[0_20px_60px_rgba(80,25,65,0.08)] backdrop-blur-xl animate-scale-in sm:p-9"
-              style={{ minHeight: '590px' }}
+              style={{ minHeight: isRegister ? '660px' : '590px' }}
             >
-              {/* Lock icon */}
+              {/* Icon */}
               <div className="mx-auto flex h-[46px] w-[46px] items-center justify-center rounded-full bg-[#FFF0F6]">
-                <Lock className="h-5 w-5 text-[#E83A7E]" />
+                {isRegister ? <UserRoundPlus className="h-5 w-5 text-[#E83A7E]" /> : <Lock className="h-5 w-5 text-[#E83A7E]" />}
               </div>
 
               {/* Heading */}
-              <h2 className="mt-4 text-center text-[26px] font-extrabold text-[#1A121A]">Log In</h2>
-              <p className="mt-1.5 text-center text-[14px] text-[#81747D]">Welcome back! Please enter your details.</p>
+              <h2 className="mt-4 text-center text-[26px] font-extrabold text-[#1A121A]">
+                {isRegister ? 'Create Account' : 'Log In'}
+              </h2>
+              <p className="mt-1.5 text-center text-[14px] text-[#81747D]">
+                {isRegister ? 'Join Amori and find your perfect match.' : 'Welcome back! Please enter your details.'}
+              </p>
 
               {/* Social login */}
               <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -349,20 +456,43 @@ export default function AuthPage() {
               </div>
 
               {/* Form */}
-              <form onSubmit={handleLogin} noValidate>
+              <form onSubmit={isRegister ? handleRegister : handleLogin} noValidate>
+                {/* Full Name (register only) */}
+                {isRegister && (
+                  <div>
+                    <Label htmlFor="reg-name" className="text-[12.5px] font-bold text-[#292229]">
+                      Full Name
+                    </Label>
+                    <div className="relative mt-2">
+                      <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#B5A7AF]" />
+                      <Input
+                        id="reg-name"
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className={`h-[45px] rounded-[11px] border bg-[#FFFCFD] pl-10 pr-3 text-[13px] text-[#1A121A] placeholder:text-[#8A7D85] focus-visible:ring-0 ${
+                          errors.name ? 'border-[#E84A70]' : 'border-[#E9DEE5] focus:border-[#E83A7E]'
+                        }`}
+                      />
+                    </div>
+                    {errors.name && <p className="mt-1.5 text-[11.5px] text-[#E84A70]">{errors.name}</p>}
+                  </div>
+                )}
+
                 {/* Email */}
-                <div>
-                  <Label htmlFor="login-email" className="text-[12.5px] font-bold text-[#292229]">
+                <div className={isRegister ? 'mt-[18px]' : ''}>
+                  <Label htmlFor={isRegister ? 'reg-email' : 'login-email'} className="text-[12.5px] font-bold text-[#292229]">
                     Email
                   </Label>
                   <div className="relative mt-2">
                     <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#B5A7AF]" />
                     <Input
-                      id="login-email"
+                      id={isRegister ? 'reg-email' : 'login-email'}
                       type="email"
                       placeholder="Enter your email"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
+                      value={isRegister ? registerEmail : loginEmail}
+                      onChange={(e) => (isRegister ? setRegisterEmail(e.target.value) : setLoginEmail(e.target.value))}
                       className={`h-[45px] rounded-[11px] border bg-[#FFFCFD] pl-10 pr-3 text-[13px] text-[#1A121A] placeholder:text-[#8A7D85] focus-visible:ring-0 ${
                         errors.email ? 'border-[#E84A70]' : 'border-[#E9DEE5] focus:border-[#E83A7E]'
                       }`}
@@ -373,17 +503,17 @@ export default function AuthPage() {
 
                 {/* Password */}
                 <div className="mt-[18px]">
-                  <Label htmlFor="login-password" className="text-[12.5px] font-bold text-[#292229]">
+                  <Label htmlFor={isRegister ? 'reg-password' : 'login-password'} className="text-[12.5px] font-bold text-[#292229]">
                     Password
                   </Label>
                   <div className="relative mt-2">
                     <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#B5A7AF]" />
                     <Input
-                      id="login-password"
+                      id={isRegister ? 'reg-password' : 'login-password'}
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Enter your password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder={isRegister ? 'Create a password' : 'Enter your password'}
+                      value={isRegister ? registerPassword : loginPassword}
+                      onChange={(e) => (isRegister ? setRegisterPassword(e.target.value) : setLoginPassword(e.target.value))}
                       className={`h-[45px] rounded-[11px] border bg-[#FFFCFD] pl-10 pr-10 text-[13px] text-[#1A121A] placeholder:text-[#8A7D85] focus-visible:ring-0 ${
                         errors.password ? 'border-[#E84A70]' : 'border-[#E9DEE5] focus:border-[#E83A7E]'
                       }`}
@@ -399,28 +529,105 @@ export default function AuthPage() {
                   {errors.password && <p className="mt-1.5 text-[11.5px] text-[#E84A70]">{errors.password}</p>}
                 </div>
 
-                {/* Remember + Forgot */}
-                <div className="mt-3.5 flex items-center justify-between">
-                  <label className="flex cursor-pointer items-center gap-2">
+                {/* Date of Birth + Gender (register only) */}
+                {isRegister && (
+                  <>
+                    <div className="mt-[18px]">
+                      <Label htmlFor="reg-birth" className="text-[12.5px] font-bold text-[#292229]">
+                        Date of Birth
+                      </Label>
+                      <div className="relative mt-2">
+                        <CalendarDays className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#B5A7AF] pointer-events-none" />
+                        <Input
+                          id="reg-birth"
+                          type="date"
+                          placeholder="Select your date of birth"
+                          value={birthDate}
+                          max={maxBirthDate}
+                          onChange={(e) => setBirthDate(e.target.value)}
+                          className={`h-[45px] rounded-[11px] border bg-[#FFFCFD] pl-10 pr-3 text-[13px] text-[#1A121A] placeholder:text-[#8A7D85] focus-visible:ring-0 ${
+                            errors.birthDate ? 'border-[#E84A70]' : 'border-[#E9DEE5] focus:border-[#E83A7E]'
+                          }`}
+                        />
+                      </div>
+                      {errors.birthDate && <p className="mt-1.5 text-[11.5px] text-[#E84A70]">{errors.birthDate}</p>}
+                    </div>
+
+                    <div className="mt-[18px]">
+                      <Label className="text-[12.5px] font-bold text-[#292229]">Gender</Label>
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        {([
+                          { value: 'female', label: 'Female' },
+                          { value: 'male', label: 'Male' },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setGender(opt.value)}
+                            className={`h-[45px] rounded-[11px] border text-[13px] font-semibold transition-all ${
+                              gender === opt.value
+                                ? 'border-[#E83A7E] bg-[#FFF0F6] text-[#E83A7E] shadow-[0_4px_12px_rgba(232,58,126,0.12)]'
+                                : 'border-[#E9DEE5] bg-[#FFFCFD] text-[#5A4F57] hover:border-[#F2B7D1]'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      {errors.gender && <p className="mt-1.5 text-[11.5px] text-[#E84A70]">{errors.gender}</p>}
+                    </div>
+                  </>
+                )}
+
+                {/* Remember + Forgot (login only) */}
+                {!isRegister && (
+                  <div className="mt-3.5 flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRemember(!remember)}
+                        className={`flex h-4 w-4 items-center justify-center rounded-[5px] border transition-colors ${
+                          remember ? 'border-[#E83A7E] bg-[#E83A7E]' : 'border-[#D9CDD4] bg-white'
+                        }`}
+                      >
+                        {remember && (
+                          <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none">
+                            <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                      <span className="text-[12.5px] text-[#5A4F57]">Remember me</span>
+                    </label>
+                    <a href="/auth?tab=forgot" className="text-[12px] font-semibold text-[#E4337B] hover:underline">
+                      Forgot password?
+                    </a>
+                  </div>
+                )}
+
+                {/* Terms (register only) */}
+                {isRegister && (
+                  <label className="mt-3.5 flex cursor-pointer items-start gap-2">
                     <button
                       type="button"
-                      onClick={() => setRemember(!remember)}
-                      className={`flex h-4 w-4 items-center justify-center rounded-[5px] border transition-colors ${
-                        remember ? 'border-[#E83A7E] bg-[#E83A7E]' : 'border-[#D9CDD4] bg-white'
+                      onClick={() => setAcceptedTerms(!acceptedTerms)}
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border transition-colors ${
+                        acceptedTerms ? 'border-[#E83A7E] bg-[#E83A7E]' : 'border-[#D9CDD4] bg-white'
                       }`}
                     >
-                      {remember && (
+                      {acceptedTerms && (
                         <svg viewBox="0 0 12 12" className="h-2.5 w-2.5" fill="none">
                           <path d="M2.5 6L5 8.5L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       )}
                     </button>
-                    <span className="text-[12.5px] text-[#5A4F57]">Remember me</span>
+                    <span className="text-[12px] leading-[1.5] text-[#5A4F57]">
+                      I agree to Amori&apos;s{' '}
+                      <a href="/terms" className="font-semibold text-[#E4337B] hover:underline">Terms of Service</a>
+                      {' '}and{' '}
+                      <a href="/terms" className="font-semibold text-[#E4337B] hover:underline">Privacy Policy</a>
+                    </span>
                   </label>
-                  <a href="/auth?tab=forgot" className="text-[12px] font-semibold text-[#E4337B] hover:underline">
-                    Forgot password?
-                  </a>
-                </div>
+                )}
 
                 {/* CTA */}
                 <Button
@@ -432,12 +639,12 @@ export default function AuthPage() {
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Logging in...
+                      {isRegister ? 'Creating account...' : 'Logging in...'}
                     </>
                   ) : (
                     <>
                       <Heart className="mr-2 h-4 w-4 fill-white text-white" />
-                      Log In
+                      {isRegister ? 'Create Account' : 'Log In'}
                     </>
                   )}
                 </Button>
@@ -449,11 +656,11 @@ export default function AuthPage() {
                 <p className="text-[12px] text-[#827780]">Your data is protected with end-to-end encryption</p>
               </div>
 
-              {/* Mobile sign up link */}
+              {/* Mobile switch link */}
               <p className="mt-4 text-center text-[13px] text-[#71666F] lg:hidden">
-                Don&apos;t have an account?{' '}
-                <button onClick={() => router.push('/auth?tab=register')} className="font-semibold text-[#DD3478]">
-                  Sign Up
+                {isRegister ? "Already have an account? " : "Don't have an account? "}
+                <button onClick={() => switchTab(isRegister ? 'login' : 'register')} className="font-semibold text-[#DD3478]">
+                  {isRegister ? 'Log In' : 'Sign Up'}
                 </button>
               </p>
             </div>
